@@ -8,21 +8,6 @@ import {
 import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import * as tl from 'telegram/tl';
-import type { Api } from 'telegram/tl';
-import { Dialog } from 'telegram/tl/custom/dialog';
-
-type TelegramUser = {
-    id?: string | number;
-    firstName?: string;
-    lastName?: string;
-    username?: string;
-    phone?: string;
-    bot?: boolean;
-    verified?: boolean;
-    restricted?: boolean;
-    scam?: boolean;
-    fake?: boolean;
-};
 
 
 export class TelegramClientNode implements INodeType {

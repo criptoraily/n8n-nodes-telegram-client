@@ -24,8 +24,8 @@
     "lint": "eslint 'src/nodes' 'src/credentials' --ext .ts --fix",
     "prepublishOnly": "npm run build && npm run lint",
     "dev": "tsc --watch",
-    "format": "prettier src/nodes' 'src/credentials' --write",
-    "lintfix": "eslint src/nodes' 'src/credentials' package.json --fix"
+    "format": "prettier 'src/nodes' 'src/credentials' --write",
+    "lintfix": "eslint 'src/nodes' 'src/credentials' package.json --fix"
   },
   "files": [
     "dist"
