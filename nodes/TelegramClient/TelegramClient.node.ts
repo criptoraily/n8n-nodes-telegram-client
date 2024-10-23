@@ -502,10 +502,8 @@ export class TelegramClient implements INodeType {
                             const userId = this.getNodeParameter('userId', i) as string;
                             
                             try {
-                                // קבלת הישות
                                 const entity = await client.getEntity(userId);
                         
-                                // בדיקה האם זו ישות מסוג User באמצעות המאפיינים הזמינים
                                 if ('firstName' in entity || 'username' in entity) {
                                     returnData.push({
                                         json: {
