@@ -20,8 +20,7 @@ export class TelegramClientNode implements INodeType {
         subtitle: '={{$parameter["operation"]}}',
         description: 'Use Telegram Client API',
         defaults: {
-            name: 'Telegram Client',
-            color: '#fff'
+            name: 'Telegram Client'
         },
         inputs: ['main'],
         outputs: ['main'],
