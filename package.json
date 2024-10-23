@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-telegram-client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "n8n node for Telegram Client API with full user capabilities",
   "keywords": [
     "n8n-community-node-package",
@@ -33,7 +33,7 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/src/credentials/TelrgramClient.credentials.js" 
+      "dist/src/credentials/TelrgramClient.credentials.js"
     ],
     "nodes": [
       "dist/src/nodes/TelegramClient/TelrgramClient.node.js"
