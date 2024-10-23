@@ -8,7 +8,8 @@ import {
 } from 'n8n-workflow';
 import { TelegramClient as TgramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
-import * as tl from 'telegram/tl';
+import { Api } from 'telegram/tl';
+
 
 
 export class TelegramClient implements INodeType {
@@ -334,7 +335,7 @@ export class TelegramClient implements INodeType {
 
                             if (mediaType === 'video') {
                                 sendOptions.attributes = [
-                                    new tl.Api.DocumentAttributeVideo({
+                                    new Api.DocumentAttributeVideo({
                                         supportsStreaming: true,
                                         duration: 0,
                                         w: 0,
@@ -343,14 +344,14 @@ export class TelegramClient implements INodeType {
                                 ];
                             } else if (mediaType === 'audio') {
                                 sendOptions.attributes = [
-                                    new tl.Api.DocumentAttributeAudio({
+                                    new Api.DocumentAttributeAudio({
                                         voice: false,
                                         duration: 0,
                                     })
                                 ];
                             } else if (mediaType === 'voice') {
                                 sendOptions.attributes = [
-                                    new tl.Api.DocumentAttributeAudio({
+                                    new Api.DocumentAttributeAudio({
                                         voice: true,
                                         duration: 0,
                                     })
@@ -468,7 +469,7 @@ export class TelegramClient implements INodeType {
                         case 'joinChat': {
                             const chatId = this.getNodeParameter('chatId', i) as string;
                     
-                            await client.invoke(new tl.Api.channels.JoinChannel({
+                            await client.invoke(new Api.channels.JoinChannel({
                                 channel: await client.getInputEntity(chatId),
                             }));
                     
@@ -485,7 +486,7 @@ export class TelegramClient implements INodeType {
                         case 'leaveChat': {
                             const chatId = this.getNodeParameter('chatId', i) as string;
                     
-                            await client.invoke(new tl.Api.channels.LeaveChannel({
+                            await client.invoke(new Api.channels.LeaveChannel({
                                 channel: await client.getInputEntity(chatId),
                             }));
                     

@@ -47,8 +47,8 @@
     "typescript": "~4.8.4"
   },
   "dependencies": {
-    "telegram": "^2.19.10",
     "n8n-core": "^1.14.1",
-    "n8n-workflow": "^1.48.0"
+    "n8n-workflow": "^1.48.0",
+    "telegram": "^2.26.2"
   }
 }

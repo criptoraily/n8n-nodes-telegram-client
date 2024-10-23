@@ -1,18 +1,31 @@
 {
     "compilerOptions": {
-      "lib": ["es2019"],
-      "module": "commonjs",
-      "outDir": "./dist",
-      "rootDir": ".",
-      "target": "es2019",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": true,
-      "moduleResolution": "node",
-      "sourceMap": true,
-      "declaration": true
+        "lib": ["es2019"],
+        "module": "commonjs",
+        "outDir": "./dist",
+        "rootDir": "./",
+        "target": "es2019",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "moduleResolution": "node",
+        "typeRoots": [
+            "./node_modules/@types",
+            "./types"
+        ],
+        "baseUrl": ".",
+        "paths": {
+            "telegram": ["node_modules/telegram", "types/telegram.d.ts"]
+        }
     },
-    "include": ["nodes/**/*", "credentials/**/*"],
-    "exclude": ["node_modules/**/*", "dist/**/*"]
-  }
+    "include": [
+        "nodes/**/*",
+        "credentials/**/*",
+        "types/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}
