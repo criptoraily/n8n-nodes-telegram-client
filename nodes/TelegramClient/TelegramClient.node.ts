@@ -4,6 +4,7 @@ import {
     INodeType,
     INodeTypeDescription,
     IDataObject,
+    ICredentialDataDecryptedObject,
 } from 'n8n-workflow';
 import { TelegramClient as TgramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
@@ -15,7 +16,7 @@ export class TelegramClient implements INodeType {
         displayName: 'Telegram Client',
         name: 'telegramClient',
         icon: 'file:telegram.svg',
-        group: ['communication'],
+        group: ['transform'],
         version: 1,
         subtitle: '={{$parameter["operation"]}}',
         description: 'Use Telegram Client API',
@@ -624,5 +625,20 @@ export class TelegramClient implements INodeType {
         }
 
         return [returnData];
+    }
+
+    async authenticate(credentials: ICredentialDataDecryptedObject): Promise<any> {
+        const client = new TgramClient(
+            new StringSession(credentials.session as string),
+            credentials.apiId as number,
+            credentials.apiHash as string,
+            {
+                connectionRetries: 5,
+                useWSS: true,
+            }
+        );
+
+        await client.connect();
+        return client;
     }
 }
