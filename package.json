@@ -18,7 +18,7 @@
     "type": "git",
     "url": "https://github.com/ofekb/n8n-nodes-telegram-client.git"
   },
-  "main": "dist/nodes/TelegramClient/TelegramClient.node.js",
+  "main": "dist/nodes/TelegramClient/TelegramClientNode.node.js",
   "scripts": {
     "build": "tsc && gulp build:icons",
     "lint": "eslint nodes credentials --ext .ts --fix",
@@ -36,7 +36,7 @@
       "dist/credentials/TelegramClient.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/TelegramClient/TelegramClient.node.js"
+      "dist/nodes/TelegramClient/TelegramClientNode.node.js"
     ]
   },
   "devDependencies": {
