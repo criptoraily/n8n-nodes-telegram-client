@@ -15,7 +15,7 @@ export class TelegramClient implements INodeType {
     description: INodeTypeDescription = {
         displayName: 'Telegram Client',
         name: 'telegramClient',
-        icon: 'file:telegram.svg',
+        icon: 'file:telegrams.svg',
         group: ['transform'],
         version: 1,
         subtitle: '={{$parameter["operation"]}}',
