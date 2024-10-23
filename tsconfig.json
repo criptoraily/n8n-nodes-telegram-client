@@ -10,7 +10,8 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "moduleResolution": "node",
-        "baseUrl": "."
+        "baseUrl": ".",
+        "types": ["node", "form-data"]
     },
     "include": [
         "nodes/**/*",
@@ -18,7 +19,7 @@
         "sdk/**/*"
     ],
     "exclude": [
-        "node_modules",
-        "dist"
+        "node_modules/**/*",
+        "dist/**/*"
     ]
 }
