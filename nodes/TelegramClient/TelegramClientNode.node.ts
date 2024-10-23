@@ -629,5 +629,3 @@ export class TelegramClientNode implements INodeType {
         return [returnData];
     }
 }
-
-module.exports = { TelegramClientNode };
