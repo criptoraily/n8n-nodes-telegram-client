@@ -5,12 +5,12 @@ import {
     INodeTypeDescription,
     IDataObject,
 } from 'n8n-workflow';
-import { TelegramClient } from 'telegram';
+import { TelegramClient as TgramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import * as tl from 'telegram/tl';
 
 
-export class TelegramClientNode implements INodeType {
+export class TelegramClient implements INodeType {
     description: INodeTypeDescription = {
         displayName: 'Telegram Client',
         name: 'telegramClient',
@@ -278,7 +278,7 @@ export class TelegramClientNode implements INodeType {
             throw new Error('No credentials provided');
         }
 
-        const client = new TelegramClient(
+        const client = new TgramClient(
             new StringSession(credentials.session as string),
             credentials.apiId as number,
             credentials.apiHash as string,
