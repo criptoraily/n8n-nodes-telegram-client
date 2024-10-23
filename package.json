@@ -1,6 +1,6 @@
 {
     "name": "n8n-nodes-telegram-client",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "n8n node for Telegram Client API with full user capabilities",
     "keywords": [
         "n8n-community-node-package",
