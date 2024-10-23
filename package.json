@@ -47,6 +47,8 @@
   },
   "dependencies": {
     "telegram": "^2.19.10",
-    "gulp": "^5.0.0"
+    "gulp": "^5.0.0",
+    "n8n-core": "^1.14.1",
+    "n8n-workflow": "^1.48.0"
   }
 }
