@@ -21,6 +21,7 @@ export class TelegramClientNode implements INodeType {
         description: 'Use Telegram Client API',
         defaults: {
             name: 'Telegram Client',
+            color: '#fff'
         },
         inputs: ['main'],
         outputs: ['main'],
@@ -628,3 +629,5 @@ export class TelegramClientNode implements INodeType {
         return [returnData];
     }
 }
+
+module.exports = { TelegramClientNode };
