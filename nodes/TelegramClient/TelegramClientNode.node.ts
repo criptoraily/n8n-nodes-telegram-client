@@ -467,11 +467,11 @@ export class TelegramClientNode implements INodeType {
 
                         case 'joinChat': {
                             const chatId = this.getNodeParameter('chatId', i) as string;
-
-                            const result = await client.invoke(new tl.Api.channels.JoinChannel({
+                    
+                            await client.invoke(new tl.Api.channels.JoinChannel({
                                 channel: await client.getInputEntity(chatId),
                             }));
-
+                    
                             returnData.push({
                                 json: {
                                     success: true,
@@ -481,14 +481,14 @@ export class TelegramClientNode implements INodeType {
                             });
                             break;
                         }
-
+                    
                         case 'leaveChat': {
                             const chatId = this.getNodeParameter('chatId', i) as string;
-
-                            const result = await client.invoke(new tl.Api.channels.LeaveChannel({
+                    
+                            await client.invoke(new tl.Api.channels.LeaveChannel({
                                 channel: await client.getInputEntity(chatId),
                             }));
-
+                    
                             returnData.push({
                                 json: {
                                     success: true,

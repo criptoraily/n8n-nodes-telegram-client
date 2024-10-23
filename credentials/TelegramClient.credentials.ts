@@ -1,7 +1,5 @@
 // n8n-nodes-telegram-client/credentials/TelegramClientApi.credentials.ts
 import {
-    IAuthenticateGeneric,
-    ICredentialTestRequest,
     ICredentialType,
     INodeProperties,
 } from 'n8n-workflow';

@@ -1,23 +1,33 @@
 {
     "compilerOptions": {
-        "lib": ["es2019"],
-        "module": "commonjs",
-        "outDir": "./dist",
-        "rootDir": "./",
-        "target": "es2019",
-        "strict": true,
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true
+      "lib": ["es2019", "es2020.promise", "es2020.bigint", "es2020.string"],
+      "module": "commonjs",
+      "outDir": "./dist",
+      "rootDir": "./",
+      "target": "es2019",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "moduleResolution": "node",
+      "sourceMap": true,
+      "declaration": true,
+      "removeComments": false,
+      "noImplicitAny": true,
+      "noImplicitReturns": true,
+      "noUnusedLocals": true,
+      "noErrorTruncation": true,
+      "useUnknownInCatchVariables": false
     },
-	"include": [
-		"credentials/**/*",
-		"nodes/**/*",
-		"package.json"
-	],
-	"exclude": [
-		"node_modules", 
-		"**/*.spec.ts"
-	]
+    "include": [
+      "credentials/**/*",
+      "nodes/**/*",
+      "package.json"
+    ],
+    "exclude": [
+      "node_modules",
+      "dist",
+      "**/*.spec.ts",
+      "**/*.test.ts"
+    ]
   }
-  
