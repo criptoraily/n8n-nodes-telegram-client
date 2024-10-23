@@ -6,9 +6,9 @@ import {
     IDataObject,
     ICredentialDataDecryptedObject,
 } from 'n8n-workflow';
-import { TelegramClient as TgramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions';
-import { Api } from 'telegram/tl';
+import { TelegramClient as TgramClient } from '../../sdk/telegram';
+import { StringSession } from '../../sdk/telegram';
+import { Api } from '../../sdk/telegram';
 
 
 
@@ -290,6 +290,7 @@ export class TelegramClient implements INodeType {
             }
         );
 
+
         try {
             await client.connect();
 
@@ -499,34 +500,27 @@ export class TelegramClient implements INodeType {
                             });
                             break;
                         }
-
                         case 'getUserInfo': {
                             const userId = this.getNodeParameter('userId', i) as string;
-                            
                             try {
                                 const entity = await client.getEntity(userId);
-                        
-                                if ('firstName' in entity || 'username' in entity) {
-                                    returnData.push({
-                                        json: {
-                                            success: true,
-                                            user: {
-                                                id: String(entity.id || ''),
-                                                firstName: (entity as any).firstName || '',
-                                                lastName: (entity as any).lastName || '',
-                                                username: (entity as any).username || '',
-                                                phone: (entity as any).phone || '',
-                                                bot: Boolean((entity as any).bot),
-                                                verified: Boolean((entity as any).verified),
-                                                restricted: Boolean((entity as any).restricted),
-                                                scam: Boolean((entity as any).scam),
-                                                fake: Boolean((entity as any).fake),
-                                            }
+                                returnData.push({
+                                    json: {
+                                        success: true,
+                                        user: {
+                                            id: String(entity.id || ''),
+                                            firstName: entity.firstName || '',
+                                            lastName: entity.lastName || '',
+                                            username: entity.username || '',
+                                            phone: entity.phone || '',
+                                            bot: Boolean(entity.bot),
+                                            verified: Boolean(entity.verified),
+                                            restricted: Boolean(entity.restricted),
+                                            scam: Boolean(entity.scam),
+                                            fake: Boolean(entity.fake),
                                         }
-                                    });
-                                } else {
-                                    throw new Error('The provided ID is not a valid user');
-                                }
+                                    }
+                                });
                             } catch (error) {
                                 if (this.continueOnFail()) {
                                     returnData.push({
@@ -542,7 +536,7 @@ export class TelegramClient implements INodeType {
                             }
                             break;
                         }
-
+                
                         case 'searchMessages': {
                             const chatId = this.getNodeParameter('chatId', i) as string;
                             const query = this.getNodeParameter('query', i) as string;
@@ -573,12 +567,12 @@ export class TelegramClient implements INodeType {
                             const chatId = this.getNodeParameter('chatId', i) as string;
                             const messageId = this.getNodeParameter('messageId', i) as number;
                             const toChatId = this.getNodeParameter('toChatId', i) as string;
-
+                            
                             const result = await client.forwardMessages(toChatId, {
                                 messages: [messageId],
                                 fromPeer: chatId,
                             });
-
+                            
                             returnData.push({
                                 json: {
                                     success: true,

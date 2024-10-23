@@ -10,19 +10,12 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "moduleResolution": "node",
-        "typeRoots": [
-            "./node_modules/@types",
-            "./types"
-        ],
-        "baseUrl": ".",
-        "paths": {
-            "telegram": ["node_modules/telegram", "types/telegram.d.ts"]
-        }
+        "baseUrl": "."
     },
     "include": [
         "nodes/**/*",
         "credentials/**/*",
-        "types/**/*"
+        "sdk/**/*"
     ],
     "exclude": [
         "node_modules",
