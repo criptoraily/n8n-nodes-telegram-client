@@ -11,8 +11,8 @@
         "forceConsistentCasingInFileNames": true
     },
 	"include": [
-		"src/credentials/**/*",
-		"src/nodes/**/*",
+		"credentials/**/*",
+		"nodes/**/*",
 		"package.json"
 	],
 	"exclude": [
