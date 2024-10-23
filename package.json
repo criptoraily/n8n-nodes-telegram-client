@@ -1,62 +1,62 @@
 {
-    "name": "n8n-nodes-telegram-client",
-    "version": "0.0.1",
-    "description": "n8n node for Telegram Client API with full user capabilities",
-    "keywords": [
-        "n8n-community-node-package",
-        "telegram",
-        "telegram-client",
-        "messaging"
+  "name": "n8n-nodes-telegram-client",
+  "version": "0.0.1",
+  "description": "n8n node for Telegram Client API with full user capabilities",
+  "keywords": [
+    "n8n-community-node-package",
+    "telegram",
+    "telegram-client",
+    "messaging"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/ofekb/n8n-nodes-telegram-client",
+  "author": {
+    "name": "Ofek",
+    "telegram": "@AppDev420"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ofekb/n8n-nodes-telegram-client.git"
+  },
+  "main": "dist/src/nodes/TelegramClient/TelegramClient.node.js",
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "lint": "eslint 'src/nodes' 'src/credentials' --ext .ts --fix",
+    "prepublishOnly": "npm run build && npm run lint",
+    "dev": "tsc --watch",
+    "format": "prettier src/nodes' 'src/credentials' --write",
+    "lintfix": "eslint src/nodes' 'src/credentials' package.json --fix"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/src/credentials/TelrgramClient.credentials.js" 
     ],
-    "license": "MIT",
-    "homepage": "https://github.com/ofekb/n8n-nodes-telegram-client",
-    "author": {
-        "name": "Ofek",
-        "telegram": "@AppDev420"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/ofekb/n8n-nodes-telegram-client.git"
-    },
-    "main": "src/nodes/TelegramClient/TelegramClient.node.js",
-    "scripts": {
-        "build": "tsc && gulp build:icons",
-        "lint": "eslint nodes credentials --ext .ts --fix",
-        "prepublishOnly": "npm run build && npm run lint",
-        "dev": "tsc --watch",
-        "format": "prettier nodes credentials --write",
-        "lintfix": "eslint nodes credentials package.json --fix"
-    },
-    "files": [
-        "dist"
-    ],
-    "n8n": {
-        "n8nNodesApiVersion": 1,
-        "credentials": [
-            "dist/src/credentials/TelegramClient.credentials.js"
-        ],
-        "nodes": [
-            "dist/src/nodes/TelegramClient/TelegramClient.node.js"
-        ]
-    },
-    "devDependencies": {
-        "@types/node": "^14.18.63",
-        "@typescript-eslint/eslint-plugin": "^5.45.1",
-        "@typescript-eslint/parser": "^5.45.1",
-        "eslint": "^8.10.0",
-        "eslint-plugin-n8n-nodes-base": "^1.16.3",
-        "gulp": "^4.0.2",
-        "gulp-zip": "^5.1.0",
-        "n8n-workflow": "^0.147.0",
-        "prettier": "^2.7.1",
-        "typescript": "^4.8.4"
-    },
-    "dependencies": {
-        "big-integer": "^1.6.51",
-        "buffer": "^6.0.3",
-        "input": "^1.0.1",
-        "path": "^0.12.7",
-        "telegram": "^2.19.10",
-        "web-socket": "^0.0.0"
-    }
+    "nodes": [
+      "dist/src/nodes/TelegramClient/TelrgramClient.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^14.18.63",
+    "@typescript-eslint/eslint-plugin": "^5.45.1",
+    "@typescript-eslint/parser": "^5.45.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-n8n-nodes-base": "^1.16.3",
+    "gulp": "^4.0.2",
+    "gulp-zip": "^5.1.0",
+    "n8n-workflow": "^0.147.0",
+    "prettier": "^2.7.1",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "big-integer": "^1.6.51",
+    "buffer": "^6.0.3",
+    "input": "^1.0.1",
+    "path": "^0.12.7",
+    "telegram": "^2.19.10",
+    "web-socket": "^0.0.0"
+  }
 }
