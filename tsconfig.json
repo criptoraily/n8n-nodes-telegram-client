@@ -11,12 +11,20 @@
         "forceConsistentCasingInFileNames": true,
         "moduleResolution": "node",
         "baseUrl": ".",
+        "paths": {
+            "*": ["types/*"]
+        },
+        "typeRoots": [
+            "./types",
+            "./node_modules/@types"
+        ],
         "types": ["node", "form-data"]
     },
     "include": [
         "nodes/**/*",
         "credentials/**/*",
-        "sdk/**/*"
+        "sdk/**/*",
+        "types/**/*"
     ],
     "exclude": [
         "node_modules/**/*",

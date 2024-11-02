@@ -6,11 +6,15 @@ import {
     IDataObject,
     ICredentialDataDecryptedObject,
 } from 'n8n-workflow';
-import { TelegramClient as TgramClient } from '../../sdk/telegram';
+import { 
+    TelegramClient as TgramClient, 
+    createDocumentAttributes,
+    type Message,
+    type ChatMember,
+    type DocumentAttributeVideo,
+    type DocumentAttributeAudio,
+} from '../../sdk/telegram';
 import { StringSession } from '../../sdk/telegram';
-import { Api } from '../../sdk/telegram';
-
-
 
 export class TelegramClient implements INodeType {
     description: INodeTypeDescription = {
@@ -43,61 +47,73 @@ export class TelegramClient implements INodeType {
                         name: 'Send Message',
                         value: 'sendMessage',
                         description: 'Send a text message',
+                        action: 'Send a text message',
                     },
                     {
                         name: 'Send Media Message',
                         value: 'sendMediaMessage',
                         description: 'Send a media message (photo, video, etc.)',
+                        action: 'Send a media message',
                     },
                     {
                         name: 'Send File',
                         value: 'sendFile',
                         description: 'Send any type of file',
+                        action: 'Send a file',
                     },
                     {
                         name: 'Reply To Message',
                         value: 'replyToMessage',
                         description: 'Reply to a specific message',
+                        action: 'Reply to a message',
                     },
                     {
                         name: 'Forward Message',
                         value: 'forwardMessage',
                         description: 'Forward a message to another chat',
+                        action: 'Forward a message',
                     },
                     {
                         name: 'Delete Messages',
                         value: 'deleteMessages',
                         description: 'Delete one or more messages',
+                        action: 'Delete messages',
                     },
                     {
                         name: 'Get Message History',
                         value: 'getMessageHistory',
                         description: 'Get chat message history',
+                        action: 'Get message history',
                     },
                     {
                         name: 'Get Chat Members',
                         value: 'getChatMembers',
                         description: 'Get all members of a chat',
+                        action: 'Get chat members',
                     },
                     {
                         name: 'Join Chat',
                         value: 'joinChat',
                         description: 'Join a chat or channel',
+                        action: 'Join a chat',
                     },
                     {
                         name: 'Leave Chat',
                         value: 'leaveChat',
                         description: 'Leave a chat or channel',
+                        action: 'Leave a chat',
                     },
                     {
                         name: 'Get User Info',
                         value: 'getUserInfo',
                         description: 'Get information about a user',
+                        action: 'Get user information',
                     },
                     {
                         name: 'Search Messages',
                         value: 'searchMessages',
                         description: 'Search for messages globally or in a specific chat',
+                        action: 'Search messages',
                     },
                 ],
                 default: 'sendMessage',
@@ -106,9 +122,9 @@ export class TelegramClient implements INodeType {
                 displayName: 'Chat ID',
                 name: 'chatId',
                 type: 'string',
-                required: true,
                 default: '',
-                description: 'Chat/Channel ID or username',
+                required: true,
+                description: 'Chat/Channel ID or username (e.g., @username or -100xxxx)',
                 displayOptions: {
                     show: {
                         operation: [
@@ -127,7 +143,21 @@ export class TelegramClient implements INodeType {
                     },
                 },
             },
-            // Message Text
+            {
+                displayName: 'User ID',
+                name: 'userId',
+                type: 'string',
+                default: '',
+                required: true,
+                description: 'User ID or username to get information about',
+                displayOptions: {
+                    show: {
+                        operation: [
+                            'getUserInfo',
+                        ],
+                    },
+                },
+            },
             {
                 displayName: 'Message Text',
                 name: 'messageText',
@@ -147,7 +177,6 @@ export class TelegramClient implements INodeType {
                 },
                 required: true,
             },
-            // Media Parameters
             {
                 displayName: 'File Path Or URL',
                 name: 'filePath',
@@ -200,7 +229,6 @@ export class TelegramClient implements INodeType {
                 default: 'photo',
                 required: true,
             },
-            // Message IDs for operations that need them
             {
                 displayName: 'Message ID',
                 name: 'messageId',
@@ -218,7 +246,36 @@ export class TelegramClient implements INodeType {
                 },
                 required: true,
             },
-            // Additional Options
+            {
+                displayName: 'To Chat ID',
+                name: 'toChatId',
+                type: 'string',
+                default: '',
+                description: 'Chat ID to forward the message to',
+                displayOptions: {
+                    show: {
+                        operation: [
+                            'forwardMessage',
+                        ],
+                    },
+                },
+                required: true,
+            },
+            {
+                displayName: 'Search Query',
+                name: 'query',
+                type: 'string',
+                default: '',
+                description: 'Text to search for in messages',
+                displayOptions: {
+                    show: {
+                        operation: [
+                            'searchMessages',
+                        ],
+                    },
+                },
+                required: true,
+            },
             {
                 displayName: 'Options',
                 name: 'options',
@@ -231,7 +288,7 @@ export class TelegramClient implements INodeType {
                         name: 'silent',
                         type: 'boolean',
                         default: false,
-                        description: 'Send message silently',
+                        description: 'Send message silently without notification',
                     },
                     {
                         displayName: 'Caption',
@@ -259,18 +316,20 @@ export class TelegramClient implements INodeType {
                             },
                         ],
                         default: 'none',
+                        description: 'How to parse the message text',
                     },
                     {
                         displayName: 'Limit',
                         name: 'limit',
                         type: 'number',
                         default: 100,
-                        description: 'Maximum number of messages to get',
+                        description: 'Maximum number of items to return',
                     },
                 ],
             },
         ],
     };
+
     async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
         const items = this.getInputData();
         const returnData: INodeExecutionData[] = [];
@@ -289,7 +348,6 @@ export class TelegramClient implements INodeType {
                 useWSS: true,
             }
         );
-
 
         try {
             await client.connect();
@@ -327,39 +385,29 @@ export class TelegramClient implements INodeType {
                             const mediaType = this.getNodeParameter('mediaType', i) as string;
                             const options = this.getNodeParameter('options', i, {}) as IDataObject;
 
-                            const sendOptions: any = {
+                            let attributes: Array<DocumentAttributeVideo | DocumentAttributeAudio> = [];
+
+                            if (mediaType === 'video') {
+                                attributes.push(createDocumentAttributes.video({
+                                    supportsStreaming: true,
+                                }));
+                            } else if (mediaType === 'audio') {
+                                attributes.push(createDocumentAttributes.audio({
+                                    voice: false,
+                                }));
+                            } else if (mediaType === 'voice') {
+                                attributes.push(createDocumentAttributes.audio({
+                                    voice: true,
+                                }));
+                            }
+
+                            const result = await client.sendFile(chatId, {
                                 file: filePath,
                                 caption: options.caption as string,
                                 silent: options.silent as boolean,
                                 forceDocument: mediaType === 'document',
-                            };
-
-                            if (mediaType === 'video') {
-                                sendOptions.attributes = [
-                                    new Api.DocumentAttributeVideo({
-                                        supportsStreaming: true,
-                                        duration: 0,
-                                        w: 0,
-                                        h: 0,
-                                    })
-                                ];
-                            } else if (mediaType === 'audio') {
-                                sendOptions.attributes = [
-                                    new Api.DocumentAttributeAudio({
-                                        voice: false,
-                                        duration: 0,
-                                    })
-                                ];
-                            } else if (mediaType === 'voice') {
-                                sendOptions.attributes = [
-                                    new Api.DocumentAttributeAudio({
-                                        voice: true,
-                                        duration: 0,
-                                    })
-                                ];
-                            }
-
-                            const result = await client.sendFile(chatId, sendOptions);
+                                attributes,
+                            });
 
                             returnData.push({
                                 json: {
@@ -367,31 +415,6 @@ export class TelegramClient implements INodeType {
                                     messageId: result.id,
                                     date: result.date,
                                     mediaType,
-                                }
-                            });
-                            break;
-                        }
-
-                        case 'replyToMessage': {
-                            const chatId = this.getNodeParameter('chatId', i) as string;
-                            const messageText = this.getNodeParameter('messageText', i) as string;
-                            const replyToMessageId = this.getNodeParameter('messageId', i) as number;
-                            const options = this.getNodeParameter('options', i, {}) as IDataObject;
-
-                            const result = await client.sendMessage(chatId, {
-                                message: messageText,
-                                replyTo: replyToMessageId,
-                                silent: options.silent as boolean,
-                                parseMode: options.parseMode as string === 'none' ? undefined : options.parseMode as string,
-                            });
-
-                            returnData.push({
-                                json: {
-                                    success: true,
-                                    messageId: result.id,
-                                    replyToMessageId,
-                                    date: result.date,
-                                    text: messageText,
                                 }
                             });
                             break;
@@ -409,19 +432,12 @@ export class TelegramClient implements INodeType {
                             returnData.push({
                                 json: {
                                     success: true,
-                                    messages: messages.map(message => ({
-                                        id: message.id,
-                                        date: message.date,
-                                        text: message.text,
-                                        fromId: message.fromId,
-                                        media: message.media ? {
-                                            type: message.media.className,
-                                        } : null,
-                                    })),
+                                    messages: messages,
                                 }
                             });
                             break;
                         }
+
                         case 'deleteMessages': {
                             const chatId = this.getNodeParameter('chatId', i) as string;
                             const messageId = this.getNodeParameter('messageId', i) as number;
@@ -451,92 +467,25 @@ export class TelegramClient implements INodeType {
                             returnData.push({
                                 json: {
                                     success: true,
-                                    members: participants.map(participant => ({
-                                        id: participant.id,
-                                        firstName: participant.firstName,
-                                        lastName: participant.lastName,
-                                        username: participant.username,
-                                        phone: participant.phone,
-                                        bot: participant.bot,
-                                        scam: participant.scam,
-                                        fake: participant.fake,
-                                    })),
-                                    total: participants.length,
+                                    members: participants,
                                 }
                             });
                             break;
                         }
 
-                        case 'joinChat': {
-                            const chatId = this.getNodeParameter('chatId', i) as string;
-                    
-                            await client.invoke(new Api.channels.JoinChannel({
-                                channel: await client.getInputEntity(chatId),
-                            }));
-                    
-                            returnData.push({
-                                json: {
-                                    success: true,
-                                    joined: true,
-                                    chatId,
-                                }
-                            });
-                            break;
-                        }
-                    
-                        case 'leaveChat': {
-                            const chatId = this.getNodeParameter('chatId', i) as string;
-                    
-                            await client.invoke(new Api.channels.LeaveChannel({
-                                channel: await client.getInputEntity(chatId),
-                            }));
-                    
-                            returnData.push({
-                                json: {
-                                    success: true,
-                                    left: true,
-                                    chatId,
-                                }
-                            });
-                            break;
-                        }
                         case 'getUserInfo': {
                             const userId = this.getNodeParameter('userId', i) as string;
-                            try {
-                                const entity = await client.getEntity(userId);
-                                returnData.push({
-                                    json: {
-                                        success: true,
-                                        user: {
-                                            id: String(entity.id || ''),
-                                            firstName: entity.firstName || '',
-                                            lastName: entity.lastName || '',
-                                            username: entity.username || '',
-                                            phone: entity.phone || '',
-                                            bot: Boolean(entity.bot),
-                                            verified: Boolean(entity.verified),
-                                            restricted: Boolean(entity.restricted),
-                                            scam: Boolean(entity.scam),
-                                            fake: Boolean(entity.fake),
-                                        }
-                                    }
-                                });
-                            } catch (error) {
-                                if (this.continueOnFail()) {
-                                    returnData.push({
-                                        json: {
-                                            success: false,
-                                            error: error instanceof Error ? error.message : 'Failed to get user info',
-                                            operation: 'getUserInfo',
-                                        }
-                                    });
-                                    continue;
+                            const user = await client.getEntity(userId);
+                            
+                            returnData.push({
+                                json: {
+                                    success: true,
+                                    user,
                                 }
-                                throw error;
-                            }
+                            });
                             break;
                         }
-                
+
                         case 'searchMessages': {
                             const chatId = this.getNodeParameter('chatId', i) as string;
                             const query = this.getNodeParameter('query', i) as string;
@@ -551,13 +500,7 @@ export class TelegramClient implements INodeType {
                             returnData.push({
                                 json: {
                                     success: true,
-                                    messages: messages.map(message => ({
-                                        id: message.id,
-                                        date: message.date,
-                                        text: message.text,
-                                        fromId: message.fromId,
-                                    })),
-                                    total: messages.length,
+                                    messages,
                                 }
                             });
                             break;
@@ -568,7 +511,7 @@ export class TelegramClient implements INodeType {
                             const messageId = this.getNodeParameter('messageId', i) as number;
                             const toChatId = this.getNodeParameter('toChatId', i) as string;
                             
-                            const result = await client.forwardMessages(toChatId, {
+                            const results = await client.forwardMessages(toChatId, {
                                 messages: [messageId],
                                 fromPeer: chatId,
                             });
@@ -577,14 +520,90 @@ export class TelegramClient implements INodeType {
                                 json: {
                                     success: true,
                                     originalMessageId: messageId,
-                                    forwardedMessageId: result[0].id,
+                                    forwardedMessages: results,
                                     fromChatId: chatId,
                                     toChatId,
                                 }
                             });
                             break;
                         }
+                        case 'replyToMessage': {
+                            const chatId = this.getNodeParameter('chatId', i) as string;
+                            const messageText = this.getNodeParameter('messageText', i) as string;
+                            const replyToMessageId = this.getNodeParameter('messageId', i) as number;
+                            const options = this.getNodeParameter('options', i, {}) as IDataObject;
 
+                            const result = await client.sendMessage(chatId, {
+                                message: messageText,
+                                replyTo: replyToMessageId,
+                                silent: options.silent as boolean,
+                                parseMode: options.parseMode as string === 'none' ? undefined : options.parseMode as string,
+                            });
+
+                            returnData.push({
+                                json: {
+                                    success: true,
+                                    messageId: result.id,
+                                    replyToMessageId,
+                                    date: result.date,
+                                    text: messageText,
+                                }
+                            });
+                            break;
+                        }
+
+                        case 'sendFile': {
+                            const chatId = this.getNodeParameter('chatId', i) as string;
+                            const filePath = this.getNodeParameter('filePath', i) as string;
+                            const options = this.getNodeParameter('options', i, {}) as IDataObject;
+
+                            const result = await client.sendFile(chatId, {
+                                file: filePath,
+                                caption: options.caption as string,
+                                silent: options.silent as boolean,
+                                forceDocument: true,
+                            });
+
+                            returnData.push({
+                                json: {
+                                    success: true,
+                                    messageId: result.id,
+                                    date: result.date,
+                                    filePath,
+                                }
+                            });
+                            break;
+                        }
+
+                        case 'joinChat': {
+                            const chatId = this.getNodeParameter('chatId', i) as string;
+                            
+                            await client.joinChannel(chatId);
+                            
+                            returnData.push({
+                                json: {
+                                    success: true,
+                                    joined: true,
+                                    chatId,
+                                }
+                            });
+                            break;
+                        }
+                        
+                        case 'leaveChat': {
+                            const chatId = this.getNodeParameter('chatId', i) as string;
+                            
+                            await client.leaveChannel(chatId);
+                            
+                            returnData.push({
+                                json: {
+                                    success: true,
+                                    left: true,
+                                    chatId,
+                                }
+                            });
+                            break;
+                        }
                         default: {
                             throw new Error(`Operation "${operation}" is not supported`);
                         }
@@ -603,13 +622,7 @@ export class TelegramClient implements INodeType {
                     throw error instanceof Error ? error : new Error('An unknown error occurred');
                 }
             }
-        } catch (error) {
-            if (this.continueOnFail()) {
-                return [returnData];
-            }
-            throw error;
         } finally {
-            // Always disconnect the client when done
             if (client?.connected) {
                 try {
                     await client.disconnect();
@@ -633,7 +646,11 @@ export class TelegramClient implements INodeType {
             }
         );
 
-        await client.connect();
-        return client;
+        try {
+            await client.connect();
+            return client;
+        } catch (error) {
+            throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
 }

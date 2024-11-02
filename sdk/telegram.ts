@@ -1,6 +1,40 @@
-import axios, { AxiosInstance } from 'axios';
-import FormData from 'form-data';
-import { createReadStream } from 'fs';
+import { MTProto } from '@mtproto/core';
+import { promises as fsPromises } from 'fs';
+import * as path from 'path';
+
+// Interfaces for document attributes and other types
+interface DocumentAttributeVideo {
+    _: 'documentAttributeVideo';
+    supportsStreaming?: boolean;
+    duration: number;
+    w: number;
+    h: number;
+}
+
+interface DocumentAttributeAudio {
+    _: 'documentAttributeAudio';
+    voice: boolean;
+    duration: number;
+}
+
+interface Message {
+    id: number;
+    date: number;
+    text: string;
+    fromId?: string | number;
+    media?: any;
+}
+
+interface ChatMember {
+    id: string | number;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    phone?: string;
+    bot?: boolean;
+    scam?: boolean;
+    fake?: boolean;
+}
 
 export class StringSession {
     private session: string;
@@ -12,13 +46,14 @@ export class StringSession {
     save(): string {
         return this.session;
     }
+
+    load(session: string): void {
+        this.session = session;
+    }
 }
 
 export class TelegramClient {
-    private api: AxiosInstance;
-    private session: StringSession;
-    private apiId: number;
-    private apiHash: string;
+    public mtproto: MTProto;
     public connected: boolean = false;
 
     constructor(
@@ -31,19 +66,26 @@ export class TelegramClient {
             [key: string]: any;
         } = {}
     ) {
-        this.session = session;
-        this.apiId = apiId;
-        this.apiHash = apiHash;
-        this.api = axios.create({
-            baseURL: 'https://api.telegram.org',
-            headers: {
-                'Content-Type': 'application/json'
+        this.mtproto = new MTProto({
+            api_id: apiId,
+            api_hash: apiHash,
+            storageOptions: {
+                path: path.resolve(__dirname, './storage'),
             }
         });
     }
 
     async connect(): Promise<void> {
-        this.connected = true;
+        try {
+            await this.mtproto.call('users.getFullUser', {
+                id: {
+                    _: 'inputUserSelf'
+                }
+            });
+            this.connected = true;
+        } catch (error) {
+            throw new Error('Failed to connect: ' + (error as Error).message);
+        }
     }
 
     async disconnect(): Promise<void> {
@@ -51,7 +93,7 @@ export class TelegramClient {
     }
 
     async sendMessage(
-        entity: string | number,
+        chatId: string | number,
         options: {
             message: string;
             replyTo?: number;
@@ -59,361 +101,279 @@ export class TelegramClient {
             parseMode?: string;
             [key: string]: any;
         }
-    ): Promise<any> {
-        const params = {
-            chat_id: entity,
-            text: options.message,
-            parse_mode: options.parseMode,
-            reply_to_message_id: options.replyTo,
-            disable_notification: options.silent
-        };
+    ): Promise<Message> {
+        try {
+            const peer = await this.resolvePeer(chatId);
+            const result = await this.mtproto.call('messages.sendMessage', {
+                peer: peer,
+                message: options.message,
+                random_id: Math.ceil(Math.random() * 0xFFFFFFFF),
+                silent: options.silent,
+                reply_to_msg_id: options.replyTo,
+            });
 
-        const response = await this.api.post(`/bot${this.apiHash}/sendMessage`, params);
-        return {
-            id: response.data.result.message_id,
-            date: new Date(response.data.result.date * 1000),
-            text: options.message
-        };
+            return {
+                id: result.updates?.[0]?.id || 0,
+                date: result.updates?.[0]?.date || Date.now() / 1000,
+                text: options.message,
+            };
+        } catch (error) {
+            throw new Error('Failed to send message: ' + (error as Error).message);
+        }
     }
 
     async sendFile(
-        entity: string | number,
+        chatId: string | number,
         options: {
             file: string | Buffer;
             caption?: string;
             silent?: boolean;
             forceDocument?: boolean;
-            attributes?: any[];
-            [key: string]: any;
+            attributes?: Array<DocumentAttributeVideo | DocumentAttributeAudio>;
+            mimeType?: string;
         }
-    ): Promise<any> {
-        const formData = new FormData();
-        
-        if (typeof options.file === 'string') {
-            formData.append('document', createReadStream(options.file));
-        } else if (Buffer.isBuffer(options.file)) {
-            formData.append('document', options.file, { filename: 'file' });
-        }
+    ): Promise<Message> {
+        try {
+            const peer = await this.resolvePeer(chatId);
+            let fileData: Buffer;
 
-        formData.append('chat_id', entity.toString());
-        if (options.caption) formData.append('caption', options.caption);
-        if (options.silent) formData.append('disable_notification', 'true');
-
-        const response = await this.api.post(
-            `/bot${this.apiHash}/sendDocument`,
-            formData,
-            {
-                headers: { ...formData.getHeaders() }
+            if (typeof options.file === 'string') {
+                fileData = await fsPromises.readFile(options.file);
+            } else {
+                fileData = options.file;
             }
-        );
 
-        return {
-            id: response.data.result.message_id,
-            date: new Date(response.data.result.date * 1000)
-        };
+            const fileName = typeof options.file === 'string' ? path.basename(options.file) : 'file';
+
+            const uploadResult = await this.mtproto.call('upload.saveFile', {
+                file: {
+                    _: 'inputFile',
+                    name: fileName,
+                    md5_checksum: '',
+                    parts: Math.ceil(fileData.length / 524288), // 512KB chunks
+                    bytes: fileData
+                }
+            });
+
+            const mediaInput = {
+                _: 'inputMediaUploadedDocument',
+                file: uploadResult,
+                mime_type: options.mimeType || 'application/octet-stream',
+                attributes: [
+                    {
+                        _: 'documentAttributeFilename',
+                        file_name: fileName
+                    },
+                    ...(options.attributes || [])
+                ],
+                force_file: options.forceDocument
+            };
+
+            const result = await this.mtproto.call('messages.sendMedia', {
+                peer: peer,
+                media: mediaInput,
+                message: options.caption || '',
+                random_id: Math.ceil(Math.random() * 0xFFFFFFFF),
+                silent: options.silent,
+            });
+
+            return {
+                id: result.updates?.[0]?.id || 0,
+                date: result.updates?.[0]?.date || Date.now() / 1000,
+                text: options.caption || '',
+            };
+        } catch (error) {
+            throw new Error('Failed to send file: ' + (error as Error).message);
+        }
     }
 
     async getMessages(
-        entity: string | number,
+        chatId: string | number,
         options: {
             limit?: number;
             search?: string;
-            [key: string]: any;
         } = {}
-    ): Promise<any[]> {
-        const params = {
-            chat_id: entity,
-            limit: options.limit || 100
-        };
+    ): Promise<Message[]> {
+        try {
+            const peer = await this.resolvePeer(chatId);
+            const result = await this.mtproto.call('messages.getHistory', {
+                peer: peer,
+                limit: options.limit || 100,
+                offset_id: 0,
+                offset_date: 0,
+                add_offset: 0,
+                max_id: 0,
+                min_id: 0,
+                hash: 0,
+            });
 
-        const response = await this.api.get(`/bot${this.apiHash}/getUpdates`, { params });
-        return response.data.result.map((msg: any) => ({
-            id: msg.message_id,
-            date: new Date(msg.date * 1000),
-            text: msg.text,
-            fromId: msg.from.id
-        }));
-    }
-
-    async getParticipants(
-        entity: string | number,
-        options: {
-            limit?: number;
-            [key: string]: any;
-        } = {}
-    ): Promise<any[]> {
-        const response = await this.api.get(`/bot${this.apiHash}/getChatMembers`, {
-            params: {
-                chat_id: entity
-            }
-        });
-
-        return response.data.result.map((member: any) => ({
-            id: member.user.id,
-            firstName: member.user.first_name,
-            lastName: member.user.last_name,
-            username: member.user.username,
-            bot: member.user.is_bot
-        }));
+            return result.messages.map((msg: any) => ({
+                id: msg.id,
+                date: msg.date,
+                text: msg.message,
+                fromId: msg.from_id,
+            }));
+        } catch (error) {
+            throw new Error('Failed to get messages: ' + (error as Error).message);
+        }
     }
 
     async deleteMessages(
-        entity: string | number,
+        chatId: string | number,
         messageIds: number[],
         options: {
             revoke?: boolean;
-            [key: string]: any;
         } = {}
     ): Promise<void> {
-        await Promise.all(
-            messageIds.map(id =>
-                this.api.post(`/bot${this.apiHash}/deleteMessage`, {
-                    chat_id: entity,
-                    message_id: id
-                })
-            )
-        );
+        try {
+            const peer = await this.resolvePeer(chatId);
+            await this.mtproto.call('messages.deleteMessages', {
+                id: messageIds,
+                revoke: options.revoke
+            });
+        } catch (error) {
+            throw new Error('Failed to delete messages: ' + (error as Error).message);
+        }
     }
 
-    async getInputEntity(entity: string | number): Promise<any> {
-        const response = await this.api.get(`/bot${this.apiHash}/getChat`, {
-            params: { chat_id: entity }
-        });
-        return response.data.result;
+    async getParticipants(
+        chatId: string | number,
+        options: {
+            limit?: number;
+        } = {}
+    ): Promise<ChatMember[]> {
+        try {
+            const peer = await this.resolvePeer(chatId);
+            const result = await this.mtproto.call('channels.getParticipants', {
+                channel: peer,
+                filter: { _: 'channelParticipantsRecent' },
+                offset: 0,
+                limit: options.limit || 100,
+                hash: 0,
+            });
+
+            return result.users.map((user: any) => ({
+                id: user.id,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                username: user.username,
+                phone: user.phone,
+                bot: user.bot,
+                scam: user.scam,
+                fake: user.fake,
+            }));
+        } catch (error) {
+            throw new Error('Failed to get participants: ' + (error as Error).message);
+        }
     }
 
-    /**
-     * Get information about a user or chat
-     */
     async getEntity(userId: string | number): Promise<any> {
         try {
-            const response = await this.api.get(`/bot${this.apiHash}/getUser`, {
-                params: { user_id: userId }
+            const inputUser = await this.resolvePeer(userId);
+            const result = await this.mtproto.call('users.getFullUser', {
+                id: inputUser,
             });
-            
-            const user = response.data.result;
+
+            const user = result.user;
             return {
                 id: user.id,
                 firstName: user.first_name,
                 lastName: user.last_name,
                 username: user.username,
-                phone: user.phone_number,
-                bot: user.is_bot,
-                verified: user.is_verified,
-                restricted: user.is_restricted,
-                scam: user.is_scam,
-                fake: user.is_fake
+                phone: user.phone,
+                bot: user.bot,
+                verified: user.verified,
+                restricted: user.restricted,
+                scam: user.scam,
+                fake: user.fake,
             };
         } catch (error) {
-            throw new Error('Failed to get user information');
+            throw new Error('Failed to get user info: ' + (error as Error).message);
         }
     }
 
-    /**
-     * Forward messages to another chat
-     */
     async forwardMessages(
         toChatId: string | number,
         options: {
             messages: number[];
             fromPeer: string | number;
-            [key: string]: any;
         }
-    ): Promise<any[]> {
-        const results = await Promise.all(
-            options.messages.map(async messageId => {
-                const response = await this.api.post(`/bot${this.apiHash}/forwardMessage`, {
-                    chat_id: toChatId,
-                    from_chat_id: options.fromPeer,
-                    message_id: messageId
+    ): Promise<Message[]> {
+        try {
+            const fromPeer = await this.resolvePeer(options.fromPeer);
+            const toPeer = await this.resolvePeer(toChatId);
+
+            const result = await this.mtproto.call('messages.forwardMessages', {
+                from_peer: fromPeer,
+                to_peer: toPeer,
+                id: options.messages,
+                random_id: options.messages.map(() => Math.ceil(Math.random() * 0xFFFFFFFF)),
+            });
+
+            return result.updates
+                .filter((update: any) => update._ === 'updateMessageID')
+                .map((update: any) => ({
+                    id: update.id,
+                    date: Math.floor(Date.now() / 1000),
+                }));
+        } catch (error) {
+            throw new Error('Failed to forward messages: ' + (error as Error).message);
+        }
+    }
+
+    async joinChannel(chatId: string | number): Promise<void> {
+        const peer = await this.resolvePeer(chatId);
+        await this.mtproto.call('channels.joinChannel', {
+            channel: peer,
+        });
+    }
+
+    async leaveChannel(chatId: string | number): Promise<void> {
+        const peer = await this.resolvePeer(chatId);
+        await this.mtproto.call('channels.leaveChannel', {
+            channel: peer,
+        });
+    }
+
+    private async resolvePeer(chatId: string | number): Promise<any> {
+        try {
+            if (typeof chatId === 'string' && chatId.startsWith('@')) {
+                const result = await this.mtproto.call('contacts.resolveUsername', {
+                    username: chatId.slice(1),
                 });
-
                 return {
-                    id: response.data.result.message_id,
-                    date: new Date(response.data.result.date * 1000)
+                    _: 'inputPeerUser',
+                    user_id: result.users[0].id,
+                    access_hash: result.users[0].access_hash,
                 };
-            })
-        );
-
-        return results;
-    }
-
-    /**
-     * Search for messages in a chat
-     */
-    async searchMessages(
-        chatId: string | number,
-        query: string,
-        options: {
-            limit?: number;
-            [key: string]: any;
-        } = {}
-    ): Promise<any[]> {
-        const response = await this.api.get(`/bot${this.apiHash}/searchMessages`, {
-            params: {
-                chat_id: chatId,
-                query,
-                limit: options.limit || 100
+            } else {
+                return {
+                    _: 'inputPeerChat',
+                    chat_id: Number(chatId),
+                };
             }
-        });
-
-        return response.data.result.map((msg: any) => ({
-            id: msg.message_id,
-            date: new Date(msg.date * 1000),
-            text: msg.text,
-            fromId: msg.from.id
-        }));
-    }
-
-    /**
-     * Edit a message
-     */
-    async editMessage(
-        entity: string | number,
-        messageId: number,
-        text: string,
-        options: {
-            parseMode?: string;
-            [key: string]: any;
-        } = {}
-    ): Promise<any> {
-        const response = await this.api.post(`/bot${this.apiHash}/editMessageText`, {
-            chat_id: entity,
-            message_id: messageId,
-            text,
-            parse_mode: options.parseMode
-        });
-
-        return {
-            id: response.data.result.message_id,
-            text: response.data.result.text,
-            date: new Date(response.data.result.date * 1000)
-        };
-    }
-
-    /**
-     * Get chat information
-     */
-    async getChat(chatId: string | number): Promise<any> {
-        const response = await this.api.get(`/bot${this.apiHash}/getChat`, {
-            params: { chat_id: chatId }
-        });
-
-        const chat = response.data.result;
-        return {
-            id: chat.id,
-            title: chat.title,
-            type: chat.type,
-            username: chat.username,
-            firstName: chat.first_name,
-            lastName: chat.last_name,
-            description: chat.description,
-            memberCount: chat.member_count
-        };
-    }
-
-    /**
-     * Pin a message in a chat
-     */
-    async pinMessage(
-        chatId: string | number,
-        messageId: number,
-        options: {
-            silent?: boolean;
-            [key: string]: any;
-        } = {}
-    ): Promise<boolean> {
-        await this.api.post(`/bot${this.apiHash}/pinChatMessage`, {
-            chat_id: chatId,
-            message_id: messageId,
-            disable_notification: options.silent
-        });
-
-        return true;
-    }
-
-    /**
-     * Unpin a message in a chat
-     */
-    async unpinMessage(
-        chatId: string | number,
-        messageId?: number
-    ): Promise<boolean> {
-        if (messageId) {
-            await this.api.post(`/bot${this.apiHash}/unpinChatMessage`, {
-                chat_id: chatId,
-                message_id: messageId
-            });
-        } else {
-            await this.api.post(`/bot${this.apiHash}/unpinAllChatMessages`, {
-                chat_id: chatId
-            });
+        } catch (error) {
+            throw new Error('Failed to resolve peer: ' + (error as Error).message);
         }
-
-        return true;
-    }
-
-    /**
-     * Get chat administrators
-     */
-    async getAdministrators(chatId: string | number): Promise<any[]> {
-        const response = await this.api.get(`/bot${this.apiHash}/getChatAdministrators`, {
-            params: { chat_id: chatId }
-        });
-
-        return response.data.result.map((admin: any) => ({
-            userId: admin.user.id,
-            username: admin.user.username,
-            firstName: admin.user.first_name,
-            lastName: admin.user.last_name,
-            status: admin.status,
-            isOwner: admin.status === 'creator',
-            canEdit: admin.can_edit_messages,
-            canDelete: admin.can_delete_messages,
-            canManageChat: admin.can_manage_chat
-        }));
-    }
-
-    invoke(request: any): Promise<any> {
-        if (request && request.className) {
-            switch (request.className) {
-                case 'channels.JoinChannel':
-                    return this.api.post(`/bot${this.apiHash}/joinChat`, {
-                        chat_id: request.channel
-                    });
-                case 'channels.LeaveChannel':
-                    return this.api.post(`/bot${this.apiHash}/leaveChat`, {
-                        chat_id: request.channel
-                    });
-                default:
-                    throw new Error(`Unknown request type: ${request.className}`);
-            }
-        }
-        throw new Error('Invalid request format');
     }
 }
 
-export const Api = {
-    DocumentAttributeVideo: class {
-        constructor(params: any) {
-            return { ...params, className: 'DocumentAttributeVideo' };
-        }
-    },
-    DocumentAttributeAudio: class {
-        constructor(params: any) {
-            return { ...params, className: 'DocumentAttributeAudio' };
-        }
-    },
-    channels: {
-        JoinChannel: class {
-            constructor(params: any) {
-                return { ...params, className: 'channels.JoinChannel' };
-            }
-        },
-        LeaveChannel: class {
-            constructor(params: any) {
-                return { ...params, className: 'channels.LeaveChannel' };
-            }
-        }
-    }
+// Helper functions for creating document attributes
+export const createDocumentAttributes = {
+    video: (params: Partial<DocumentAttributeVideo>): DocumentAttributeVideo => ({
+        _: 'documentAttributeVideo',
+        duration: params.duration || 0,
+        w: params.w || 0,
+        h: params.h || 0,
+        supportsStreaming: params.supportsStreaming || false,
+    }),
+
+    audio: (params: Partial<DocumentAttributeAudio>): DocumentAttributeAudio => ({
+        _: 'documentAttributeAudio',
+        voice: params.voice || false,
+        duration: params.duration || 0,
+    }),
 };
+
+// Export all interfaces
+export type { DocumentAttributeVideo, DocumentAttributeAudio, Message, ChatMember };
