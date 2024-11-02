@@ -17,7 +17,7 @@
   },
   "main": "dist/nodes/TelegramClient/TelegramClient.node.js",
   "scripts": {
-    "build": "tsc && gulp build:icons",
+    "build": "tsc && gulp build:icons && cp -R types dist/types",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials --ext .ts",
