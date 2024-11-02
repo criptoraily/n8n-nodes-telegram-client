@@ -1,4 +1,3 @@
-// n8n-nodes-telegram-client/credentials/TelegramClientApi.credentials.ts
 import {
     ICredentialType,
     INodeProperties,
@@ -25,6 +24,9 @@ export class TelegramClientApi implements ICredentialType {
             default: '',
             required: true,
             description: 'API Hash from my.telegram.org',
+            typeOptions: {
+                password: true,
+            },
         },
         {
             displayName: 'Phone Number',
@@ -32,6 +34,7 @@ export class TelegramClientApi implements ICredentialType {
             type: 'string',
             default: '',
             required: true,
+            placeholder: '+1234567890',
             description: 'Phone number in international format',
         },
         {
@@ -40,10 +43,10 @@ export class TelegramClientApi implements ICredentialType {
             type: 'string',
             default: '',
             required: false,
+            description: '2FA password if enabled',
             typeOptions: {
                 password: true,
             },
-            description: '2FA password if enabled',
         },
         {
             displayName: 'Session String',

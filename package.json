@@ -30,7 +30,7 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/TelegramClientApi.credentials.js"
+      "dist/credentials/TelegramClient.credentials.js"
     ],
     "nodes": [
       "dist/nodes/TelegramClient/TelegramClient.node.js"
